@@ -1,0 +1,6 @@
+﻿services:
+  hariane2mqtt:
+    image: hariane2mqtt
+    build:
+      context: .
+      dockerfile: Dockerfile
