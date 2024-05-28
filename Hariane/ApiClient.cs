@@ -159,6 +159,11 @@ public class ApiClient
                 Console.WriteLine($"{key} => {value}");
             }
         }
+
+        if (data is not null)
+        {
+            data.NumContrat = NumContrat;
+        }
         
         return data;
     }

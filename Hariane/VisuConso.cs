@@ -33,4 +33,6 @@ public class VisuConso
 
         return res;
     }
+    
+    public string NumContrat { get; set; } = "";
 }
