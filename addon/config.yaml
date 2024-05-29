@@ -35,13 +35,13 @@ schema:
   log_level: list(trace|debug|info|notice|warning|error|fatal)?
   debug: bool?
   cron: str?
-  hariane_password: str?
+  hariane_password: password?
   hariane_username: str?
   hariane_num_contrat: str?
   mqtt_host: str?
   mqtt_port: port?
   mqtt_username: str?
-  mqtt_password: str?
+  mqtt_password: password?
   mqtt_client_id: str?
   mqtt_topic: str?
     

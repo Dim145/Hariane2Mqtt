@@ -1,5 +1,6 @@
 FROM dim145/hariane2mqtt:latest AS base
 
+RUN apk add jq
 
 COPY entrypoint.sh /addon_entrypoint.sh
 
