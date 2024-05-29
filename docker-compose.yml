@@ -14,3 +14,5 @@
       MQTT_PASSWORD: "123456789"
       MQTT_PORT: 1883
       CRON: 0 * * * *
+      MQTT_TOPIC: homeassistant
+      MQTT_USERNAME: xxxxx

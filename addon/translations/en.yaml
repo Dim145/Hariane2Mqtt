@@ -1,0 +1,50 @@
+---
+configuration:
+  log_level:
+    name: Log level
+    description: >-
+      Controls the level of log details the add-on provides.
+  debug: 
+    name: Debug
+    description: >-
+      Enable debug mode
+  cron: 
+    name: Cron
+    description: >-
+      Cron schedule
+  hariane_password: 
+    name: Hariane password
+    description: >-
+      Hariane website password.
+  hariane_username: 
+    name: Hariane username
+    description: >-
+      Hariane website username.
+  hariane_num_contrat:
+    name: Hariane contract number
+    description: >-
+      Hariane contract number. You can find it on your Hariane account or on your bill.
+  mqtt_host: 
+    name: MQTT host
+    description: >-
+      MQTT broker host. You can use the IP address or the hostname.
+  mqtt_port:
+    name: MQTT port
+    description: >-
+      MQTT broker port.
+  mqtt_username:
+    name: MQTT username
+    description: >-
+      MQTT broker username.
+  mqtt_password: 
+    name: MQTT password
+    description: >-
+      MQTT broker password.
+  mqtt_client_id:
+    name: MQTT client ID
+    description: >-
+      Unique ID.
+  mqtt_topic: 
+    name: MQTT topic
+    description: >-
+      Base topic to publish the data. Use your topic configured in MQTT service to permit Home Assistant to read the data.
