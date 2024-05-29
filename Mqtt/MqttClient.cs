@@ -40,6 +40,16 @@ public class MqttClient: IAsyncDisposable
         return this;
     }
 
+    private Dictionary<string, string> GetDeviceInfos(string numContrat)
+    {
+        return new Dictionary<string, string>
+        {
+            { "identifiers", $"hariane_{numContrat}" },
+            { "manufacturer", "Hariane" },
+            { "name", $"Hariane {numContrat}" },
+        };
+    }
+
     public async Task Publish(VisuConso conso)
     {
         if (string.IsNullOrEmpty(Topic))
@@ -52,15 +62,9 @@ public class MqttClient: IAsyncDisposable
 
         var completeTopic = Path.Combine(Topic, "sensor", $"hariane_{conso.NumContrat}");
 
-        var deviceInfos = new Dictionary<string, string>
-        {
-            { "identifiers", $"hariane_{conso.NumContrat}" },
-            { "manufacturer", "Hariane" },
-            { "name", $"Hariane {conso.NumContrat}" },
-        };
+        var deviceInfos = GetDeviceInfos(conso.NumContrat);
 
         var lastValue = consoDict.ToList().MaxBy(e => e.Key);
-        
         
 
         await Publish(completeTopic, "last_value", lastValue.Value, new Dictionary<string, object>
@@ -70,9 +74,22 @@ public class MqttClient: IAsyncDisposable
             { "unit_of_measurement", "m\u00b3" },
             { "state_class", "total" },
         });
-        await Publish(completeTopic, "last_value_date", lastValue.Key, new Dictionary<string, object>
+        await Publish(completeTopic, "last_value_date", lastValue.Key.ToString("yyyy-MM-dd HH:mm:ss"), new Dictionary<string, object>
         {
             {"device", deviceInfos},
+        });
+    }
+
+    public async Task PublishTotalConsuption(string numContrat, float total)
+    {
+        var completeTopic = Path.Combine(Topic, "sensor", $"hariane_{numContrat}");
+        
+        await Publish(completeTopic, "total_consomption", total, new Dictionary<string, object>
+        {
+            {"device", GetDeviceInfos(numContrat)},
+            { "device_class", "water" },
+            { "unit_of_measurement", "m\u00b3" },
+            { "state_class", "total_increasing" },
         });
     }
 
@@ -84,7 +101,7 @@ public class MqttClient: IAsyncDisposable
         
         await Client.PublishAsync(new MqttApplicationMessageBuilder()
             .WithTopic(Path.Combine(completeTopic, name, "state"))
-            .WithPayload(JsonSerializer.Serialize(value))
+            .WithPayload(value?.GetType() == typeof(string) ? value.ToString() : JsonSerializer.Serialize(value))
             .WithRetainFlag()
             .Build());
         

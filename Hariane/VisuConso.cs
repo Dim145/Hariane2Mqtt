@@ -10,6 +10,9 @@ public class VisuConso
     
     [JsonPropertyName("conso")]
     public  List<object[]> Conso { get; set; }
+    
+    [JsonPropertyName("warning")]
+    public int[] Warning { get; set; } = [];
 
     public Dictionary<DateTime, float> GetConso()
     {

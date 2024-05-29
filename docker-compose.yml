@@ -4,6 +4,8 @@
     build:
       context: .
       dockerfile: Dockerfile
+    volumes:
+      - ./data:/data
     environment:
       DEBUG: false
       HARIANE_NUM_CONTRAT: "123456789"
@@ -16,3 +18,4 @@
       CRON: 0 * * * *
       MQTT_TOPIC: homeassistant
       MQTT_USERNAME: xxxxx
+      CALCULATE_TOTAL_CONSUMPTION: false

@@ -1,9 +1,11 @@
-﻿using Hariane2Mqtt.Hariane;
+﻿using System.Globalization;
+using Hariane2Mqtt.Hariane;
 using Hariane2Mqtt.Mqtt;
 
 // get and check environment variables
 
 var debug = bool.Parse(Environment.GetEnvironmentVariable("DEBUG") ?? "false");
+var calculateTotalComsumption = bool.Parse(Environment.GetEnvironmentVariable("CALCULATE_TOTAL_CONSUMPTION") ?? "false");
 
 var username = Environment.GetEnvironmentVariable("HARIANE_USERNAME");
 var password = Environment.GetEnvironmentVariable("HARIANE_PASSWORD");
@@ -69,5 +71,53 @@ var mqttClient = new MqttClient(mqttBroker, mqttPort, mqttClientId, mqttTopic, m
 await mqttClient.Connect();
 
 await mqttClient.Publish(waterData);
+
+var fileName = Path.Combine("/data", "hariane2mqtt_total_consumption.txt");
+
+if (calculateTotalComsumption)
+{
+    var totalConsumption = 0f;
+    
+    if (File.Exists(fileName))
+    {
+        Console.WriteLine("Read total consumption from file...");
+        
+        totalConsumption = float.Parse(await File.ReadAllTextAsync(fileName), CultureInfo.InvariantCulture);
+
+        totalConsumption += waterData.GetConso().ToList().MaxBy(e => e.Key).Value;
+        
+        await File.WriteAllTextAsync(fileName, totalConsumption.ToString(CultureInfo.InvariantCulture));
+    
+        await mqttClient.PublishTotalConsuption(numContrat, totalConsumption);
+    }
+    else
+    {
+        Console.WriteLine("Calculate total consumption...");
+        
+        var allWaterData = waterData.GetConso();
+
+        do
+        {
+            var tmp = dateDebut;
+            dateDebut -= TimeSpan.FromDays(ApiClient.maxDays + 1);
+            dateFin = tmp - TimeSpan.FromDays(1);
+
+            Console.WriteLine($"Get data from {dateDebut.Date} to {dateFin.Date}...");
+
+            waterData = await apiClient.GetVisuConso(dateDebut, dateFin, debug);
+
+            allWaterData = allWaterData.Concat(waterData.GetConso()).ToDictionary(x => x.Key, x => x.Value);
+        } 
+        while (waterData.Warning.Length <= ApiClient.maxDays / 3 * 2); // permit days off
+    
+        totalConsumption = allWaterData.Values.Sum();
+    
+        await File.WriteAllTextAsync(fileName, totalConsumption.ToString(CultureInfo.InvariantCulture));
+    
+        await mqttClient.PublishTotalConsuption(numContrat, totalConsumption);   
+    }
+    
+    Console.WriteLine($"Total consumption: {totalConsumption} m3");
+}
 
 return 0;

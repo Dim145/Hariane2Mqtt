@@ -29,6 +29,7 @@ options:
   mqtt_port: 1883
   mqtt_topic: homeassistant
   mqtt_username: ""
+  calculate_total_consumption: false
 schema:
   log_level: list(trace|debug|info|notice|warning|error|fatal)?
   debug: bool?
@@ -42,4 +43,5 @@ schema:
   mqtt_password: password?
   mqtt_client_id: str?
   mqtt_topic: str?
+  calculate_total_consumption: bool?
     
