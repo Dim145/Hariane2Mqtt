@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net;
 using System.Text.Json;
 using HtmlAgilityPack;
@@ -12,6 +13,14 @@ public class ApiClient
     public const string harianeApiGetInfosContrat = $"{harianeUrl}common/getInfosContrat";
     public const int maxDays = 17;
     public const string dateFormat = "dd/MM/yyyy";
+    
+    public static DateTimeFormatInfo FormatInfo { get; } = new()
+    {
+        ShortDatePattern = "dd/MM/yyyy",
+        ShortTimePattern = "HH:mm:ss",
+        LongDatePattern = "dd/MM/yyyy HH:mm:ss",
+        LongTimePattern = "HH:mm:ss",
+    };
     
     private HttpClient Client { get; }
     

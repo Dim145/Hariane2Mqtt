@@ -16,6 +16,6 @@ CMD ["/entrypoint.sh"]
 ############
 
 LABEL \
-  io.hass.version="0.1.4" \
+  io.hass.version="0.1.5" \
   io.hass.type="addon" \
   io.hass.arch="armv7|amd64|arm64"
