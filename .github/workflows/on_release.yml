@@ -32,4 +32,13 @@ jobs:
           tags: |
             ${{ env.REPOSITORY_LC }}:latest
             ${{ env.REPOSITORY_LC }}:${{ github.ref_name }}
+      - name: Build and push arm64
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          platforms: linux/arm64
+          push: true
+          tags: |
+            ${{ env.REPOSITORY_LC }}:latest-arm64
+            ${{ env.REPOSITORY_LC }}:${{ github.ref_name }}-arm64
           
