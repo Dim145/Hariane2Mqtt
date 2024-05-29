@@ -38,7 +38,7 @@ schema:
   hariane_password: str?
   hariane_username: str?
   hariane_num_contrat: str?
-  mqtt_host: string?
+  mqtt_host: str?
   mqtt_port: port?
   mqtt_username: str?
   mqtt_password: str?
