@@ -7,9 +7,13 @@ if [ ! -d /config ]; then
 fi
 
 # Default location
-CONFIGSOURCE="/homeassistant/hariane_2_mqtt/config.yaml"
+CONFIGSOURCE="/data/config.yaml"
 
 mkdir -p /config/hariane_2_mqtt
+
+ls /config
+echo "data"
+ls /data
 
 # transform each config.yaml entries to env variables
 if [ -f $CONFIGSOURCE ]; then
