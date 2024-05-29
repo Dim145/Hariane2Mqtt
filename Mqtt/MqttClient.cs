@@ -59,29 +59,49 @@ public class MqttClient: IAsyncDisposable
             { "name", $"Hariane {conso.NumContrat}" },
         };
 
-        var lastIndex = consoDict.ToList().MaxBy(e => e.Key);
+        var lastValue = consoDict.ToList().MaxBy(e => e.Key);
+        
+        
 
-        // publish last index state
+        await Publish(completeTopic, "last_value", lastValue.Value, new Dictionary<string, object>
+        {
+            {"device", deviceInfos},
+            { "device_class", "water" },
+            { "unit_of_measurement", "m\u00b3" },
+            { "state_class", "total" },
+        });
+        await Publish(completeTopic, "last_value_date", lastValue.Key, new Dictionary<string, object>
+        {
+            {"device", deviceInfos},
+        });
+    }
+
+    private async Task Publish<T>(string completeTopic, string name, T value, Dictionary<string, object> config, Dictionary<string, object>? attributes = null)
+    {
+        config["name"] = name;
+        config["state_topic"] = $"{completeTopic}/{name}/state";
+        config["uniq_id"] = $"{(config["device"] as Dictionary<string, string>)?["identifiers"] ?? completeTopic.Replace("/", "_")}_{name}";
+        
         await Client.PublishAsync(new MqttApplicationMessageBuilder()
-            .WithTopic(Path.Combine(completeTopic, "last_index", "state"))
-            .WithPayload(JsonSerializer.Serialize(lastIndex.Value))
+            .WithTopic(Path.Combine(completeTopic, name, "state"))
+            .WithPayload(JsonSerializer.Serialize(value))
             .WithRetainFlag()
             .Build());
         
         await Client.PublishAsync(new MqttApplicationMessageBuilder()
-            .WithTopic(Path.Combine(completeTopic, "last_index", "config"))
-            .WithPayload(JsonSerializer.Serialize(new Dictionary<string, object>
-            {
-                {"name", "last_index"},
-                {"device_class", "water"},
-                {"unit_of_measurement", "m\u00b3"},
-                {"state_class", "total"},
-                {"device", deviceInfos},
-                {"uniq_id", $"hariane_{conso.NumContrat}_last_index"},
-                {"state_topic", $"{completeTopic}/last_index/state"}
-            }))
+            .WithTopic(Path.Combine(completeTopic, name, "config"))
+            .WithPayload(JsonSerializer.Serialize(config))
             .WithRetainFlag()
             .Build());
+
+        if (attributes != null)
+        {
+            await Client.PublishAsync(new MqttApplicationMessageBuilder()
+                .WithTopic(Path.Combine(completeTopic, name, "attributes"))
+                .WithPayload(JsonSerializer.Serialize(attributes))
+                .WithRetainFlag()
+                .Build());
+        }
     }
     
     public async Task Disconnect()
