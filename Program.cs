@@ -16,11 +16,10 @@ if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
 }
 
 var numContrat = Environment.GetEnvironmentVariable("HARIANE_NUM_CONTRAT");
-var numCompteur = Environment.GetEnvironmentVariable("HARIANE_NUM_COMPTEUR");
 
-if (string.IsNullOrEmpty(numContrat) || string.IsNullOrEmpty(numCompteur))
+if (string.IsNullOrEmpty(numContrat))
 {
-    Console.Error.WriteLine("Please set the HARIANE_NUM_CONTRAT and HARIANE_NUM_COMPTEUR environment variables.");
+    Console.Error.WriteLine("Please set the HARIANE_NUM_CONTRAT environment variable.");
     
     return 1;
 }
@@ -42,9 +41,19 @@ if (string.IsNullOrEmpty(mqttBroker) || string.IsNullOrEmpty(mqttClientId) || st
 // start script
 
 
-var apiClient = await new ApiClient(username, password, numContrat, numCompteur).Login(debug);
+var apiClient = await new ApiClient(username, password).Login(debug);
 
-var lastIndex = await apiClient.GetLastIndex(debug);
+var infosContrat = await apiClient.GetInfosContrat(numContrat, debug);
+var numCompteur = infosContrat?.M2ONumCpt;
+
+if (string.IsNullOrWhiteSpace(numCompteur))
+{
+    Console.Error.WriteLine("Could not get the meter number.");
+    
+    return 1;
+}
+
+var lastIndex = await apiClient.SetRequiredNums(numContrat, numCompteur).GetLastIndex(debug);
 
 DateTime? lastIndexDate = lastIndex?.GetEndDateJour();
 

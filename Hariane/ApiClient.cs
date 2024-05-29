@@ -9,6 +9,7 @@ public class ApiClient
     public const string harianeUrl = "https://www.hariane.fr/";
     public const string harianeApiWaterUrl = $"{harianeUrl}common/getBDDTVisuConso";
     public const string harianeApiGetLastIndex = $"{harianeUrl}common/getBDDTLastIndex";
+    public const string harianeApiGetInfosContrat = $"{harianeUrl}common/getInfosContrat";
     public const int maxDays = 17;
     public const string dateFormat = "dd/MM/yyyy";
     
@@ -23,16 +24,22 @@ public class ApiClient
     
     private bool LoggedIn { get; set; }
     
-    public ApiClient(string username, string password, string numContrat, string numCompteur)
+    public ApiClient(string username, string password)
     {
         Username = username;
         Password = password;
-        NumContrat = numContrat;
-        NumCompteur = numCompteur;
         
         Client = new HttpClient();
         Client.DefaultRequestHeaders.Add("X-Requested-With", "XMLHttpRequest");
         Client.DefaultRequestHeaders.Add("Cache-Control", "no-cache");
+    }
+
+    public ApiClient SetRequiredNums(string numContrat, string numCompteur)
+    {
+        NumContrat = numContrat;
+        NumCompteur = numCompteur;
+        
+        return this;
     }
 
     public async Task<ApiClient> Login(bool debug = false)
@@ -166,5 +173,39 @@ public class ApiClient
         }
         
         return data;
+    }
+    
+    public async Task<InfosContrat?> GetInfosContrat(string numContrat, bool debug = false)
+    {
+        if (!LoggedIn)
+        {
+            throw new Exception("Not logged in.");
+        }
+        
+        Console.WriteLine("Get infos contrat from hariane...");
+
+        var formContent = new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            { "id_cnt", numContrat }
+        });
+
+        var response = await Client.PostAsync(harianeApiGetInfosContrat, formContent);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            await Console.Error.WriteLineAsync("Get infos contrat failed. (bad response)");
+            
+            return null;
+        }
+
+        var responseContent = await response.Content.ReadAsStringAsync();
+        var json = JsonSerializer.Deserialize<InfosContrat>(responseContent);
+            
+        if (debug)
+        {
+            Console.WriteLine($"infos contrat: {responseContent}");
+        }
+            
+        return json;
     }
 }
