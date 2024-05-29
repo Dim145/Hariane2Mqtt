@@ -35,6 +35,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
+          file: Dockerfile-arm64
           platforms: linux/arm64
           push: true
           tags: |
