@@ -111,10 +111,13 @@ if (calculateTotalComsumption)
         while (waterData.Warning.Length <= ApiClient.maxDays / 3 * 2); // permit days off
     
         totalConsumption = allWaterData.Values.Sum();
+        
+        await mqttClient.PublishTotalConsuption(numContrat, totalConsumption);  
+        
+        if (!Directory.Exists(Path.GetDirectoryName(fileName)))
+            Directory.CreateDirectory(Path.GetDirectoryName(fileName)!);
     
         await File.WriteAllTextAsync(fileName, totalConsumption.ToString(CultureInfo.InvariantCulture));
-    
-        await mqttClient.PublishTotalConsuption(numContrat, totalConsumption);   
     }
     
     Console.WriteLine($"Total consumption: {totalConsumption} m3");
