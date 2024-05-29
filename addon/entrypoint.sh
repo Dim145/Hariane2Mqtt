@@ -9,11 +9,7 @@ fi
 # Default location
 CONFIGSOURCE="/data/config.yaml"
 
-mkdir -p /config/hariane_2_mqtt
-
-ls /config
-echo "data"
-ls /data
+cat /data/options.json
 
 # transform each config.yaml entries to env variables
 if [ -f $CONFIGSOURCE ]; then
