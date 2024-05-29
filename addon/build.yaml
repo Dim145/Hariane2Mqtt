@@ -1,0 +1,4 @@
+---
+build_from:
+  arm64: dim145/hariane2mqtt:latest-arm64
+  amd64: dim145/hariane2mqtt:latest

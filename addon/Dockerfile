@@ -1,4 +1,6 @@
-FROM dim145/hariane2mqtt:latest AS base
+ARG BUILD_FROM=dim145/hariane2mqtt:latest
+
+FROM ${BUILD_FROM} AS base
 
 RUN apk add jq
 
@@ -18,4 +20,4 @@ CMD ["/entrypoint.sh"]
 LABEL \
   io.hass.version="0.2.0" \
   io.hass.type="addon" \
-  io.hass.arch="armv7|amd64|arm64"
+  io.hass.arch="amd64|arm64"
