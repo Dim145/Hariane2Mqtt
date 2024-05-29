@@ -4,3 +4,13 @@
     build:
       context: .
       dockerfile: Dockerfile
+    environment:
+      DEBUG: false
+      HARIANE_NUM_CONTRAT: "123456789"
+      HARIANE_PASSWORD: "123456789"
+      HARIANE_USERNAME: "prenom.nom"
+      MQTT_CLIENT_ID: harianne2mqtt_client
+      MQTT_HOST: "XXX.XXX.XXX.XXX"
+      MQTT_PASSWORD: "123456789"
+      MQTT_PORT: 1883
+      CRON: 0 * * * *

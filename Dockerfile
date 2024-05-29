@@ -13,9 +13,14 @@ RUN dotnet build "Hariane2Mqtt.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "Hariane2Mqtt.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+RUN dotnet publish "Hariane2Mqtt.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:SelfContained=true
 
-FROM base AS final
+FROM mcr.microsoft.com/dotnet/runtime-deps:8.0-alpine AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "Hariane2Mqtt.dll"]
+
+COPY entrypoint.sh /entrypoint.sh
+
+RUN chmod +x /entrypoint.sh
+
+CMD ["/entrypoint.sh"]
