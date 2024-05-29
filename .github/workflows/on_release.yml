@@ -13,7 +13,6 @@ jobs:
       - name: Login to Container Registry
         uses: docker/login-action@v3
         with:
-          registry: registry-1.docker.io
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
           
@@ -27,9 +26,18 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          platforms: linux/amd64,linux/arm64,linux/arm/v7
+          platforms: linux/amd64
           push: true
           tags: |
             ${{ env.REPOSITORY_LC }}:latest
             ${{ env.REPOSITORY_LC }}:${{ github.ref_name }}
+      - name: Build and push arm64
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          platforms: linux/arm64
+          push: true
+          tags: |
+            ${{ env.REPOSITORY_LC }}:latest-arm64
+            ${{ env.REPOSITORY_LC }}:${{ github.ref_name }}-arm64
           
