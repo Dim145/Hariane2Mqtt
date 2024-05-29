@@ -22,7 +22,7 @@ public class VisuConso
                 var dateStr = line[0]?.ToString();
                 var valueStr = line[1]?.ToString();
 
-                res.Add(DateTime.Parse(dateStr.Split(" ").Last()), float.Parse(valueStr, CultureInfo.InvariantCulture));
+                res.Add(DateTime.Parse(dateStr.Split(" ").Last(), CultureInfo.GetCultureInfoByIetfLanguageTag("fr-FR")), float.Parse(valueStr, CultureInfo.InvariantCulture));
             }
             catch (Exception e)
             {

@@ -19,11 +19,11 @@ public class LastIndex
     
     public DateTime GetEndDateJour()
     {
-        return DateTime.Parse(EndDateJour);
+        return DateTime.Parse(EndDateJour, CultureInfo.GetCultureInfoByIetfLanguageTag("fr-FR"));
     }
     
     public DateTime GetStartDateJour()
     {
-        return DateTime.Parse(StartDateJour);
+        return DateTime.Parse(StartDateJour, CultureInfo.GetCultureInfoByIetfLanguageTag("fr-FR"));
     }
 }
