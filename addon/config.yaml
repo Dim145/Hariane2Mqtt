@@ -3,7 +3,7 @@ description: "Extracts Hariane  water data into MQTT a.o."
 version: 0.1.0
 slug: "hariane_2_mqtt"
 url: https://github.com/Dim145/Hariane2Mqtt
-init: false
+init: true
 homeassistant_api: true
 arch:
   - aarch64
