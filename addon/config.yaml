@@ -33,15 +33,15 @@ options:
   mqtt_username: ""
 schema:
   log_level: list(trace|debug|info|notice|warning|error|fatal)?
-  debug: boolean?
-  cron: string?
-  hariane_password: string?
-  hariane_username: string?
-  hariane_num_contrat: string?
+  debug: bool?
+  cron: str?
+  hariane_password: str?
+  hariane_username: str?
+  hariane_num_contrat: str?
   mqtt_host: string?
-  mqtt_port: int?
-  mqtt_username: string?
-  mqtt_password: string?
-  mqtt_client_id: string?
-  mqtt_topic: string?
+  mqtt_port: port?
+  mqtt_username: str?
+  mqtt_password: str?
+  mqtt_client_id: str?
+  mqtt_topic: str?
     
