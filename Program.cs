@@ -81,14 +81,24 @@ if (calculateTotalComsumption)
     if (File.Exists(fileName))
     {
         Console.WriteLine("Read total consumption from file...");
-        
-        totalConsumption = float.Parse(await File.ReadAllTextAsync(fileName), CultureInfo.InvariantCulture);
 
-        totalConsumption += waterData.GetConso().ToList().MaxBy(e => e.Key).Value;
+        var filedata = await File.ReadAllTextAsync(fileName);
+        var filedataSplitted = filedata.Split('\n');
         
-        await File.WriteAllTextAsync(fileName, totalConsumption.ToString(CultureInfo.InvariantCulture));
+        totalConsumption = float.Parse(filedataSplitted[0], CultureInfo.InvariantCulture);
+
+        var lastData = waterData.GetConso().ToList().MaxBy(e => e.Key);
+
+        var fileDataDate = DateTime.Parse(filedataSplitted[1], CultureInfo.InvariantCulture);
+        
+        if(fileDataDate < lastData.Key)
+        {
+            totalConsumption += lastData.Value;
+        
+            await File.WriteAllTextAsync(fileName, $"{totalConsumption.ToString(CultureInfo.InvariantCulture)}\n{lastData.Key.ToString(CultureInfo.InvariantCulture)}");
     
-        await mqttClient.PublishTotalConsuption(numContrat, totalConsumption);
+            await mqttClient.PublishTotalConsuption(numContrat, totalConsumption);
+        }
     }
     else
     {
@@ -116,8 +126,10 @@ if (calculateTotalComsumption)
         
         if (!Directory.Exists(Path.GetDirectoryName(fileName)))
             Directory.CreateDirectory(Path.GetDirectoryName(fileName)!);
+
+        var lastDataDate = waterData.GetConso().ToList().MaxBy(e => e.Key).Key;
     
-        await File.WriteAllTextAsync(fileName, totalConsumption.ToString(CultureInfo.InvariantCulture));
+        await File.WriteAllTextAsync(fileName, $"{totalConsumption.ToString(CultureInfo.InvariantCulture)}\n{lastDataDate.ToString(CultureInfo.InvariantCulture)}");
     }
     
     Console.WriteLine($"Total consumption: {totalConsumption} m3");
