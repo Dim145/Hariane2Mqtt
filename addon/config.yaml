@@ -1,6 +1,6 @@
 name: "Hariane 2 MQTT"
 description: "Extracts Hariane  water data into MQTT a.o."
-version: 0.1.5
+version: 0.2.0
 slug: "hariane_2_mqtt"
 url: https://github.com/Dim145/Hariane2Mqtt
 init: true
