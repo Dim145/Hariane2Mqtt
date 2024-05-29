@@ -7,9 +7,11 @@ if [ ! -d /config ]; then
 fi
 
 # Default location
-CONFIGSOURCE="/config/gazpar_2_mqtt/config.yaml"
+CONFIGSOURCE="/config/hariane_2_mqtt/config.yaml"
 
-mkdir -p /config/gazpar_2_mqtt
+mkdir -p /config/hariane_2_mqtt
+
+cat /config/hariane_2_mqtt/config.yaml
 
 # transform each config.yaml entries to env variables
 if [ -f $CONFIGSOURCE ]; then
@@ -17,11 +19,14 @@ if [ -f $CONFIGSOURCE ]; then
     while IFS=': ' read -r key value
     do
         if [ ! -z "$key" ] && [ ! -z "$value" ]; then
-            key=$(echo $key | tr '[:lower:]' '[:upper:]' | tr '-' '_' | tr '.' '_')
-            value=$(echo $value | sed 's/^ *//g' | sed 's/ *$//g')
+            key=$(echo "$key" | tr '[:lower:]' '[:upper:]' | tr '-' '_' | tr '.' '_')
+            value=$(echo "$value" | sed 's/^ *//g' | sed 's/ *$//g')
             
             # add to env for cron jobs
-            export $key=$value
+            export "$key=$value"
+            
+            # append to .env file
+            echo "export $key=$value;" >> /.env
         fi
     done < $CONFIGSOURCE
 fi

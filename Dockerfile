@@ -17,10 +17,13 @@ RUN dotnet publish "Hariane2Mqtt.csproj" -c $BUILD_CONFIGURATION -o /app/publish
 
 FROM mcr.microsoft.com/dotnet/runtime-deps:8.0-alpine AS final
 WORKDIR /app
+
+RUN apk add libc6-compat
+
 COPY --from=publish /app/publish .
 
 COPY entrypoint.sh /entrypoint.sh
 
-RUN chmod +x /entrypoint.sh
+RUN chmod -R +x /entrypoint.sh /app
 
 CMD ["/entrypoint.sh"]
