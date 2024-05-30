@@ -48,3 +48,7 @@ configuration:
     name: MQTT topic
     description: >-
       Base topic to publish the data. Use your topic configured in MQTT service to permit Home Assistant to read the data.
+  calculate_total_consumption:
+    name: Calculate total consumption
+    description: >-
+      Calculate the total consumption since the beginning of the data collection. Potentially get data from years ago. Becarreful, this option can be very slow the first time.
