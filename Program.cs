@@ -1,4 +1,5 @@
 ﻿using System.Globalization;
+using Hariane2Mqtt;
 using Hariane2Mqtt.Hariane;
 using Hariane2Mqtt.Mqtt;
 
@@ -6,6 +7,7 @@ using Hariane2Mqtt.Mqtt;
 
 var debug = bool.Parse(Environment.GetEnvironmentVariable("DEBUG") ?? "false");
 var calculateTotalComsumption = bool.Parse(Environment.GetEnvironmentVariable("CALCULATE_TOTAL_CONSUMPTION") ?? "false");
+var directoryForData = Environment.GetEnvironmentVariable("DIRECTORY_FOR_DATA") ?? "/data";
 
 var username = Environment.GetEnvironmentVariable("HARIANE_USERNAME");
 var password = Environment.GetEnvironmentVariable("HARIANE_PASSWORD");
@@ -72,7 +74,7 @@ await mqttClient.Connect();
 
 await mqttClient.Publish(waterData);
 
-var fileName = Path.Combine("/data", "hariane2mqtt_total_consumption.txt");
+var fileName = Path.Combine(directoryForData, "hariane2mqtt_total_consumption.txt");
 
 if (calculateTotalComsumption)
 {
@@ -93,32 +95,20 @@ if (calculateTotalComsumption)
         
         if(fileDataDate < lastData.Key)
         {
-            totalConsumption += lastData.Value;
-        
-            await File.WriteAllTextAsync(fileName, $"{totalConsumption.ToString(CultureInfo.InvariantCulture)}\n{lastData.Key.ToString(CultureInfo.InvariantCulture)}");
-    
+            var allMissingWaterData = await Utils.GetDataFrom(apiClient, fileDataDate, lastData.Key, debug);
+            
+            totalConsumption += allMissingWaterData.Values.Sum();
+            
             await mqttClient.PublishTotalConsuption(numContrat, totalConsumption);
+            
+            await File.WriteAllTextAsync(fileName, $"{totalConsumption.ToString(CultureInfo.InvariantCulture)}\n{lastData.Key.ToString(CultureInfo.InvariantCulture)}");
         }
     }
     else
     {
         Console.WriteLine("Calculate total consumption...");
         
-        var allWaterData = waterData.GetConso();
-
-        do
-        {
-            var tmp = dateDebut;
-            dateDebut -= TimeSpan.FromDays(ApiClient.maxDays + 1);
-            dateFin = tmp - TimeSpan.FromDays(1);
-
-            Console.WriteLine($"Get data from {dateDebut.Date} to {dateFin.Date}...");
-
-            waterData = await apiClient.GetVisuConso(dateDebut, dateFin, debug);
-
-            allWaterData = allWaterData.Concat(waterData.GetConso()).ToDictionary(x => x.Key, x => x.Value);
-        } 
-        while (waterData.Warning.Length <= ApiClient.maxDays / 3 * 2); // permit days off
+        var allWaterData = await Utils.GetDataFrom(apiClient, DateTime.MinValue, dateFin, debug);
     
         totalConsumption = allWaterData.Values.Sum();
         
@@ -127,7 +117,7 @@ if (calculateTotalComsumption)
         if (!Directory.Exists(Path.GetDirectoryName(fileName)))
             Directory.CreateDirectory(Path.GetDirectoryName(fileName)!);
 
-        var lastDataDate = waterData.GetConso().ToList().MaxBy(e => e.Key).Key;
+        var lastDataDate = allWaterData.ToList().MaxBy(e => e.Key).Key;
     
         await File.WriteAllTextAsync(fileName, $"{totalConsumption.ToString(CultureInfo.InvariantCulture)}\n{lastDataDate.ToString(CultureInfo.InvariantCulture)}");
     }
