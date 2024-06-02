@@ -5,6 +5,7 @@ slug: "hariane_2_mqtt"
 url: https://github.com/Dim145/Hariane2Mqtt
 init: true
 homeassistant_api: true
+hassio_api: true
 arch:
   - aarch64
   - amd64
