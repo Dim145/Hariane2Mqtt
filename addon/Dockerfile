@@ -1,4 +1,4 @@
-ARG BUILD_FROM=dim145/hariane2mqtt:latest
+ARG BUILD_FROM=dim145/hariane2mqtt:0.2.3
 
 FROM ${BUILD_FROM} AS base
 
@@ -18,6 +18,6 @@ CMD ["/entrypoint.sh"]
 ############
 
 LABEL \
-  io.hass.version="0.2.3" \
+  io.hass.version="0.2.4" \
   io.hass.type="addon" \
   io.hass.arch="amd64|arm64"
