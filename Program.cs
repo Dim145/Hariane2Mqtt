@@ -95,7 +95,7 @@ if (calculateTotalComsumption)
         
         if(fileDataDate < lastData.Key)
         {
-            var allMissingWaterData = await Utils.GetDataFrom(apiClient, fileDataDate, lastData.Key, debug);
+            var allMissingWaterData = await Utils.GetDataFrom(apiClient, fileDataDate + TimeSpan.FromDays(1), lastData.Key, debug);
             
             totalConsumption += allMissingWaterData.Values.Sum();
             
