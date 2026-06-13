@@ -1,29 +1,25 @@
-﻿FROM mcr.microsoft.com/dotnet/runtime:8.0 AS base
-USER $APP_UID
-WORKDIR /app
-
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+# amd64 image. Builds a musl-native self-contained binary so it runs directly on Alpine
+# (no glibc shim). The CI builds this on a native amd64 runner.
 ARG BUILD_CONFIGURATION=Release
+ARG RID=linux-musl-x64
+
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+ARG BUILD_CONFIGURATION
+ARG RID
 WORKDIR /src
 COPY ["Hariane2Mqtt.csproj", "./"]
-RUN dotnet restore "Hariane2Mqtt.csproj"
+RUN dotnet restore "Hariane2Mqtt.csproj" -r $RID
 COPY . .
-WORKDIR "/src/"
-RUN dotnet build "Hariane2Mqtt.csproj" -c $BUILD_CONFIGURATION -o /app/build
+RUN dotnet publish "Hariane2Mqtt.csproj" -c $BUILD_CONFIGURATION -r $RID --self-contained true --no-restore -o /app/publish
 
-FROM build AS publish
-ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "Hariane2Mqtt.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:SelfContained=true
-
-FROM mcr.microsoft.com/dotnet/runtime-deps:8.0-alpine AS final
+FROM mcr.microsoft.com/dotnet/runtime-deps:10.0-alpine AS final
 WORKDIR /app
 
-RUN apk add libc6-compat
+# tzdata is required for TimeZoneInfo (Energy statistics are dated in the HA local timezone).
+RUN apk add --no-cache tzdata
 
-COPY --from=publish /app/publish .
-
+COPY --from=build /app/publish .
 COPY entrypoint.sh /entrypoint.sh
-
 RUN chmod -R +x /entrypoint.sh /app
 
 CMD ["/entrypoint.sh"]

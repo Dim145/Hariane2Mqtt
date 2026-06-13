@@ -1,4 +1,4 @@
-name: publish basic container
+name: publish container
 
 on:
   release:
@@ -6,39 +6,60 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - arch: amd64
+            os: ubuntu-latest
+            dockerfile: Dockerfile
+          - arch: arm64
+            os: ubuntu-24.04-arm   # native arm64 runner (QEMU emulation breaks the .NET build)
+            dockerfile: Dockerfile-arm64
+    runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v3
-      
+      - uses: actions/checkout@v4
+
+      - name: Set lower case owner name
+        run: echo "REPOSITORY_LC=${REPOSITORY,,}" >> ${GITHUB_ENV}
+        env:
+          REPOSITORY: '${{ github.repository }}'
+
       - name: Login to Container Registry
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-          
-      - name: set lower case owner name
-        run: |
-          echo "REPOSITORY_LC=${REPOSITORY,,}" >>${GITHUB_ENV}
-        env:
-          REPOSITORY: '${{ github.repository }}'
-          
-      - name: Build and push
-        uses: docker/build-push-action@v5
+
+      - name: Build and push (${{ matrix.arch }})
+        uses: docker/build-push-action@v6
         with:
           context: .
-          platforms: linux/amd64
+          file: ${{ matrix.dockerfile }}
+          platforms: linux/${{ matrix.arch }}
           push: true
           tags: |
-            ${{ env.REPOSITORY_LC }}:latest
-            ${{ env.REPOSITORY_LC }}:${{ github.ref_name }}
-      #- name: Build and push arm64
-      #  uses: docker/build-push-action@v5
-      #  with:
-      #    context: .
-      #    file: Dockerfile-arm64
-      #    platforms: linux/arm64
-      #    push: true
-      #    tags: |
-      #      ${{ env.REPOSITORY_LC }}:latest-arm64
-      #      ${{ env.REPOSITORY_LC }}:${{ github.ref_name }}-arm64
-          
+            ${{ env.REPOSITORY_LC }}:${{ github.ref_name }}-${{ matrix.arch }}
+            ${{ env.REPOSITORY_LC }}:latest-${{ matrix.arch }}
+
+  manifest:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set lower case owner name
+        run: echo "REPOSITORY_LC=${REPOSITORY,,}" >> ${GITHUB_ENV}
+        env:
+          REPOSITORY: '${{ github.repository }}'
+
+      - name: Login to Container Registry
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Create multi-arch manifests
+        run: |
+          for tag in "${{ github.ref_name }}" latest; do
+            docker buildx imagetools create -t "${REPOSITORY_LC}:${tag}" \
+              "${REPOSITORY_LC}:${tag}-amd64" \
+              "${REPOSITORY_LC}:${tag}-arm64"
+          done

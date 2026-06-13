@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - name: Get gemspec version
@@ -30,14 +30,15 @@ jobs:
       - name: Create release
         if: ${{ steps.gemspec_version.outputs.tag != steps.get_latest_tag.outputs.tag }}
         id: create_release
-        uses: actions/create-release@v1
+        uses: softprops/action-gh-release@v2
         env:
           GITHUB_TOKEN: ${{ secrets.USER_GITHUB_TOKEN }}
         with:
           tag_name: ${{ steps.gemspec_version.outputs.tag }}
-          release_name: Release ${{ steps.gemspec_version.outputs.tag }}
+          name: Release ${{ steps.gemspec_version.outputs.tag }}
           body: |
             Auto generated release
             You have to change this description...
           draft: false
           prerelease: false
+          files: lovelace/hariane-water-card.js
