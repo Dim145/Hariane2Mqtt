@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Hariane Water Card — preview</title>
+  <style>
+    /* Approximate Home Assistant theme variables (light + dark) for a faithful preview. */
+    :root {
+      --card-background-color: #ffffff;
+      --primary-text-color: #1b2733;
+      --secondary-text-color: #6b7785;
+      --divider-color: rgba(20,40,60,.12);
+      --ha-card-border-radius: 14px;
+      --ha-card-box-shadow: 0 6px 22px -12px rgba(20,40,60,.45);
+      --error-color: #c0392b;
+    }
+    .dark {
+      --card-background-color: #1c1f24;
+      --primary-text-color: #e8edf2;
+      --secondary-text-color: #9aa6b2;
+      --divider-color: rgba(255,255,255,.12);
+      --ha-card-box-shadow: 0 8px 26px -10px rgba(0,0,0,.6);
+    }
+    body { margin: 0; font-family: system-ui, sans-serif; background: #eef2f5; padding: 28px; }
+    .dark.pane { background: #0f1217; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 360px)); gap: 24px; }
+    .pane { padding: 22px; border-radius: 18px; }
+    .pane:not(.dark) { background: #eef2f5; }
+    h2 { font: 600 13px/1 system-ui; letter-spacing: 1px; text-transform: uppercase; color: #8895a2; margin: 0 0 14px; }
+    .dark h2 { color: #5b6675; }
+  </style>
+</head>
+<body>
+  <div class="grid">
+    <div class="pane"><h2>Thème clair</h2><div id="light"></div></div>
+    <div class="pane dark"><h2>Thème sombre</h2><div id="dark"></div></div>
+    <div class="pane"><h2>Avec coût + accent custom</h2><div id="cost"></div></div>
+  </div>
+
+  <script>
+    // Minimal stand-in for HA's <ha-card> so the card looks card-like outside HA.
+    class HaCard extends HTMLElement {
+      constructor() {
+        super();
+        this.attachShadow({ mode: "open" });
+        this.shadowRoot.innerHTML =
+          `<style>:host{display:block;background:var(--card-background-color,#fff);
+            border-radius:var(--ha-card-border-radius,12px);box-shadow:var(--ha-card-box-shadow,0 2px 8px rgba(0,0,0,.12));
+            border:1px solid var(--divider-color,transparent);}</style><slot></slot>`;
+      }
+    }
+    customElements.define("ha-card", HaCard);
+  </script>
+  <script src="./hariane-water-card.js"></script>
+  <script>
+    const STAT = "hariane:water_123456789";
+
+    function genDaily(n) {
+      const rows = [];
+      let sum = 1284.0;
+      const start = new Date(); start.setHours(0, 0, 0, 0); start.setDate(start.getDate() - n);
+      const seed = [0.32,0.28,0.41,0.19,0.36,0.52,0.44,0.21,0.3,0.38,0.27,0.49,0.18,0.34,0.4,0.23,0.31,0.46,0.25,0.37];
+      for (let i = 0; i <= n; i++) {
+        const d = new Date(start); d.setDate(d.getDate() + i);
+        const change = +(seed[i % seed.length] * (0.7 + ((i * 7) % 11) / 18)).toFixed(3);
+        sum += change;
+        rows.push({ start: d.toISOString(), end: d.toISOString(), sum: +sum.toFixed(3), change });
+      }
+      return rows;
+    }
+
+    function genMonthly() {
+      const rows = [];
+      let sum = 540.0;
+      const now = new Date();
+      const m = new Date(now.getFullYear() - 1, 0, 1);
+      let k = 0;
+      while (m <= now) {
+        const change = +(6 + ((k * 5) % 9) + (m.getMonth() >= 5 && m.getMonth() <= 8 ? 4 : 0)).toFixed(2);
+        sum += change;
+        rows.push({ start: new Date(m).toISOString(), sum: +sum.toFixed(2), change });
+        m.setMonth(m.getMonth() + 1); k++;
+      }
+      return rows;
+    }
+
+    const hass = {
+      callWS(msg) {
+        const period = msg.period;
+        if (period === "day") return Promise.resolve({ [STAT]: genDaily(45) });
+        if (period === "month") return Promise.resolve({ [STAT]: genMonthly() });
+        return Promise.resolve({ [STAT]: [] });
+      },
+    };
+
+    function mount(targetId, config) {
+      const card = document.createElement("hariane-water-card");
+      card.setConfig({ statistic_id: STAT, ...config });
+      card.hass = hass;
+      document.getElementById(targetId).appendChild(card);
+    }
+
+    mount("light", { title: "Eau" });
+    mount("dark", { title: "Eau" });
+    mount("cost", { title: "Maison", days: 10, price_per_m3: 4.3, color: "#3b82f6" });
+  </script>
+</body>
+</html>
