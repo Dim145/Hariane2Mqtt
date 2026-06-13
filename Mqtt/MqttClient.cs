@@ -2,133 +2,143 @@ using System.Globalization;
 using System.Text.Json;
 using Hariane2Mqtt.Hariane;
 using MQTTnet;
-using MQTTnet.Client;
 
 namespace Hariane2Mqtt.Mqtt;
 
-public class MqttClient: IAsyncDisposable
+public class MqttClient : IAsyncDisposable
 {
-    private IMqttClient Client { get; }
-    
-    private MqttClientOptions Options { get; }
-    private string? Topic { get; }
-    
-    public MqttClient(string host, string port, string clientId, string topic, string username, string password)
-    {
-        var factory = new MqttFactory();
+    private readonly IMqttClient _client;
+    private readonly MqttClientOptions _options;
+    private readonly string _topic;
+    private readonly string _numContrat;
+    private readonly string _node;
+    private readonly string _availabilityTopic;
 
-        Client = factory.CreateMqttClient();
-        
-        Options = new MqttClientOptionsBuilder()
+    public MqttClient(string host, string port, string clientId, string topic, string username, string password, string numContrat)
+    {
+        _topic = topic.TrimEnd('/');
+        _numContrat = numContrat;
+        _node = $"hariane_{numContrat}";
+        _availabilityTopic = $"{_topic}/{_node}/availability";
+
+        _client = new MqttClientFactory().CreateMqttClient();
+        _options = new MqttClientOptionsBuilder()
             .WithTcpServer(host, int.Parse(port))
             .WithClientId(clientId)
             .WithCredentials(username, password)
+            // Last Will: only fires on an *ungraceful* disconnect (a crash mid-run). A clean exit
+            // via DisposeAsync leaves the retained "online" in place — correct for a cron publisher.
+            .WithWillTopic(_availabilityTopic)
+            .WithWillPayload("offline"u8.ToArray())
+            .WithWillRetain()
             .Build();
-        
-        Topic = topic;
     }
 
     public async Task<MqttClient> Connect()
     {
-        var result = await Client.ConnectAsync(Options, CancellationToken.None);
-        
+        var result = await _client.ConnectAsync(_options, CancellationToken.None);
         if (result.ResultCode != MqttClientConnectResultCode.Success)
-        {
             throw new Exception($"Failed to connect to the broker: {result.ResultCode}");
-        }
-        
+
+        await PublishRaw(_availabilityTopic, "online");
         return this;
     }
 
-    private Dictionary<string, string> GetDeviceInfos(string numContrat)
+    public async Task PublishConsumption(VisuConso conso)
     {
-        return new Dictionary<string, string>
+        var dict = conso.GetConso();
+        if (dict.Count == 0)
         {
-            { "identifiers", $"hariane_{numContrat}" },
-            { "manufacturer", "Hariane" },
-            { "name", $"Hariane {numContrat}" },
-        };
-    }
+            Log.Warning("No consumption points to publish.");
+            return;
+        }
 
-    public async Task Publish(VisuConso conso)
-    {
-        if (string.IsNullOrEmpty(Topic))
-            throw new Exception("Topic is not set.");
-        
-        if(!Client.IsConnected)
-            throw new Exception("Client is not connected.");
-        
-        var consoDict = conso.GetConso();
+        var last = dict.MaxBy(e => e.Key);
 
-        var completeTopic = Path.Combine(Topic, "sensor", $"hariane_{conso.NumContrat}");
-
-        var deviceInfos = GetDeviceInfos(conso.NumContrat);
-
-        var lastValue = consoDict.ToList().MaxBy(e => e.Key);
-        
-
-        await Publish(completeTopic, "last_value", lastValue.Value, new Dictionary<string, object>
+        await Publish("sensor", "last_value", Num(last.Value), new Dictionary<string, object>
         {
-            {"device", deviceInfos},
             { "device_class", "water" },
-            { "unit_of_measurement", "m\u00b3" },
+            { "unit_of_measurement", "m³" },
             { "state_class", "total" },
         });
-        await Publish(completeTopic, "last_value_date", lastValue.Key.ToString("yyyy-MM-dd HH:mm:ss"), new Dictionary<string, object>
-        {
-            {"device", deviceInfos},
-        });
+
+        await Publish("sensor", "last_value_date", last.Key.ToString("yyyy-MM-dd HH:mm:ss"), new Dictionary<string, object>());
     }
 
-    public async Task PublishTotalConsuption(string numContrat, float total)
+    public Task PublishTotal(float total) => Publish("sensor", "total_consomption", Num(total), new Dictionary<string, object>
     {
-        var completeTopic = Path.Combine(Topic, "sensor", $"hariane_{numContrat}");
-        
-        await Publish(completeTopic, "total_consomption", total, new Dictionary<string, object>
-        {
-            {"device", GetDeviceInfos(numContrat)},
-            { "device_class", "water" },
-            { "unit_of_measurement", "m\u00b3" },
-            { "state_class", "total_increasing" },
-        });
-    }
+        { "device_class", "water" },
+        { "unit_of_measurement", "m³" },
+        { "state_class", "total_increasing" },
+    });
 
-    private async Task Publish<T>(string completeTopic, string name, T value, Dictionary<string, object> config, Dictionary<string, object>? attributes = null)
+    public Task PublishMeterIndex(float index) => Publish("sensor", "index", Num(index), new Dictionary<string, object>
     {
+        { "device_class", "water" },
+        { "unit_of_measurement", "m³" },
+        { "state_class", "total_increasing" },
+    });
+
+    public Task PublishLeakSuspected(bool suspected, Dictionary<string, object>? attributes = null) =>
+        Publish("binary_sensor", "leak_suspected", suspected ? "ON" : "OFF", new Dictionary<string, object>
+        {
+            { "device_class", "problem" },
+        }, attributes);
+
+    public Task PublishLastUpdate(DateTimeOffset when) =>
+        Publish("sensor", "last_update", when.ToString("yyyy-MM-ddTHH:mm:sszzz"), new Dictionary<string, object>
+        {
+            { "device_class", "timestamp" },
+        });
+
+    private Dictionary<string, object> GetDeviceInfos() => new()
+    {
+        { "identifiers", new[] { _node } },
+        { "manufacturer", "Hariane" },
+        { "model", "Water meter" },
+        { "name", $"Hariane {_numContrat}" },
+    };
+
+    private async Task Publish(string component, string name, string state, Dictionary<string, object> config, Dictionary<string, object>? attributes = null)
+    {
+        if (!_client.IsConnected)
+            throw new Exception("MQTT client is not connected.");
+
+        var baseTopic = $"{_topic}/{component}/{_node}/{name}";
+
         config["name"] = name;
-        config["state_topic"] = $"{completeTopic}/{name}/state";
-        config["uniq_id"] = $"{(config["device"] as Dictionary<string, string>)?["identifiers"] ?? completeTopic.Replace("/", "_")}_{name}";
-        
-        await Client.PublishAsync(new MqttApplicationMessageBuilder()
-            .WithTopic(Path.Combine(completeTopic, name, "state"))
-            .WithPayload(value?.GetType() == typeof(string) ? value.ToString() : JsonSerializer.Serialize(value))
-            .WithRetainFlag()
-            .Build());
-        
-        await Client.PublishAsync(new MqttApplicationMessageBuilder()
-            .WithTopic(Path.Combine(completeTopic, name, "config"))
-            .WithPayload(JsonSerializer.Serialize(config))
+        config["state_topic"] = $"{baseTopic}/state";
+        config["unique_id"] = $"{_node}_{name}";
+        config["device"] = GetDeviceInfos();
+        config["availability_topic"] = _availabilityTopic;
+        config["payload_available"] = "online";
+        config["payload_not_available"] = "offline";
+        if (attributes is not null)
+            config["json_attributes_topic"] = $"{baseTopic}/attributes";
+
+        await PublishRaw($"{baseTopic}/state", state);
+        await PublishRaw($"{baseTopic}/config", JsonSerializer.Serialize(config));
+        if (attributes is not null)
+            await PublishRaw($"{baseTopic}/attributes", JsonSerializer.Serialize(attributes));
+    }
+
+    private Task PublishRaw(string topic, string payload) =>
+        _client.PublishAsync(new MqttApplicationMessageBuilder()
+            .WithTopic(topic)
+            .WithPayload(payload)
             .WithRetainFlag()
             .Build());
 
-        if (attributes != null)
-        {
-            await Client.PublishAsync(new MqttApplicationMessageBuilder()
-                .WithTopic(Path.Combine(completeTopic, name, "attributes"))
-                .WithPayload(JsonSerializer.Serialize(attributes))
-                .WithRetainFlag()
-                .Build());
-        }
-    }
-    
-    public async Task Disconnect()
-    {
-        await Client.DisconnectAsync();
-    }
-    
+    private static string Num(float value) => value.ToString(CultureInfo.InvariantCulture);
+
+    public Task Disconnect() => _client.DisconnectAsync();
+
     public async ValueTask DisposeAsync()
     {
-        await Disconnect();
-        Client.Dispose();
+        // Clean disconnect — does NOT trigger the Last Will, so the retained "online" persists
+        // between cron runs (the published values stay valid).
+        if (_client.IsConnected)
+            await _client.DisconnectAsync();
+        _client.Dispose();
     }
 }

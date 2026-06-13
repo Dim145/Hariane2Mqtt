@@ -1,6 +1,6 @@
 name: "Hariane 2 MQTT"
 description: "Extracts Hariane  water data into MQTT a.o."
-version: 0.2.4
+version: 0.4.0
 slug: "hariane_2_mqtt"
 url: https://github.com/Dim145/Hariane2Mqtt
 init: true
@@ -31,6 +31,10 @@ options:
   mqtt_topic: homeassistant
   mqtt_username: ""
   calculate_total_consumption: false
+  import_energy_statistics: false
+  leak_detection: false
+  leak_min_days: 3
+  leak_daily_threshold: 0.1
 schema:
   log_level: list(trace|debug|info|notice|warning|error|fatal)?
   debug: bool?
@@ -45,4 +49,7 @@ schema:
   mqtt_client_id: str?
   mqtt_topic: str?
   calculate_total_consumption: bool?
-    
+  import_energy_statistics: bool?
+  leak_detection: bool?
+  leak_min_days: int?
+  leak_daily_threshold: float?

@@ -7,15 +7,44 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		docker-compose.yml = docker-compose.yml
 	EndProjectSection
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Hariane2Mqtt.Tests", "Hariane2Mqtt.Tests\Hariane2Mqtt.Tests.csproj", "{997CC5E6-0177-417C-B347-E2787E00FA28}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
+		Debug|x64 = Debug|x64
+		Debug|x86 = Debug|x86
 		Release|Any CPU = Release|Any CPU
+		Release|x64 = Release|x64
+		Release|x86 = Release|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{BE3F0E38-875F-4CEF-9D82-D9360E3827E8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{BE3F0E38-875F-4CEF-9D82-D9360E3827E8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BE3F0E38-875F-4CEF-9D82-D9360E3827E8}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{BE3F0E38-875F-4CEF-9D82-D9360E3827E8}.Debug|x64.Build.0 = Debug|Any CPU
+		{BE3F0E38-875F-4CEF-9D82-D9360E3827E8}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{BE3F0E38-875F-4CEF-9D82-D9360E3827E8}.Debug|x86.Build.0 = Debug|Any CPU
 		{BE3F0E38-875F-4CEF-9D82-D9360E3827E8}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{BE3F0E38-875F-4CEF-9D82-D9360E3827E8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BE3F0E38-875F-4CEF-9D82-D9360E3827E8}.Release|x64.ActiveCfg = Release|Any CPU
+		{BE3F0E38-875F-4CEF-9D82-D9360E3827E8}.Release|x64.Build.0 = Release|Any CPU
+		{BE3F0E38-875F-4CEF-9D82-D9360E3827E8}.Release|x86.ActiveCfg = Release|Any CPU
+		{BE3F0E38-875F-4CEF-9D82-D9360E3827E8}.Release|x86.Build.0 = Release|Any CPU
+		{997CC5E6-0177-417C-B347-E2787E00FA28}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{997CC5E6-0177-417C-B347-E2787E00FA28}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{997CC5E6-0177-417C-B347-E2787E00FA28}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{997CC5E6-0177-417C-B347-E2787E00FA28}.Debug|x64.Build.0 = Debug|Any CPU
+		{997CC5E6-0177-417C-B347-E2787E00FA28}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{997CC5E6-0177-417C-B347-E2787E00FA28}.Debug|x86.Build.0 = Debug|Any CPU
+		{997CC5E6-0177-417C-B347-E2787E00FA28}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{997CC5E6-0177-417C-B347-E2787E00FA28}.Release|Any CPU.Build.0 = Release|Any CPU
+		{997CC5E6-0177-417C-B347-E2787E00FA28}.Release|x64.ActiveCfg = Release|Any CPU
+		{997CC5E6-0177-417C-B347-E2787E00FA28}.Release|x64.Build.0 = Release|Any CPU
+		{997CC5E6-0177-417C-B347-E2787E00FA28}.Release|x86.ActiveCfg = Release|Any CPU
+		{997CC5E6-0177-417C-B347-E2787E00FA28}.Release|x86.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
 	EndGlobalSection
 EndGlobal
