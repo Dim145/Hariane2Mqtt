@@ -17,7 +17,7 @@ jobs:
             dockerfile: Dockerfile-arm64
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Set lower case owner name
         run: echo "REPOSITORY_LC=${REPOSITORY,,}" >> ${GITHUB_ENV}
