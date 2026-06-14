@@ -26,4 +26,4 @@ jobs:
         run: dotnet test --no-build -c Release --verbosity normal
 
       - name: Verify formatting
-        run: dotnet format --verify-no-changes
+        run: dotnet format Hariane2Mqtt.sln --verify-no-changes
