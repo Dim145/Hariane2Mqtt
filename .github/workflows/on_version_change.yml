@@ -32,7 +32,7 @@ jobs:
       - name: Create release
         if: ${{ steps.gemspec_version.outputs.tag != steps.get_latest_tag.outputs.tag }}
         id: create_release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           token: ${{ secrets.USER_GITHUB_TOKEN || github.token }}
           tag_name: ${{ steps.gemspec_version.outputs.tag }}
