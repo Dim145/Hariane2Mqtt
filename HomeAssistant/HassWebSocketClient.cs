@@ -45,15 +45,9 @@ public class HassWebSocketClient : IAsyncDisposable
         Log.Info("Authenticated with Home Assistant.");
     }
 
-    /// <summary>Returns the IANA timezone configured in Home Assistant (e.g. "Europe/Paris").</summary>
-    public async Task<string> GetTimeZoneAsync(CancellationToken ct = default)
-    {
-        var result = await SendCommandAsync(new JsonObject { ["type"] = "get_config" }, ct);
-        var tz = result?["time_zone"]?.GetValue<string>();
-        if (string.IsNullOrEmpty(tz))
-            throw new Exception("Could not read time_zone from Home Assistant config.");
-        return tz;
-    }
+    /// <summary>Returns the Home Assistant <c>get_config</c> result (time_zone, currency, …).</summary>
+    public Task<JsonNode?> GetConfigAsync(CancellationToken ct = default) =>
+        SendCommandAsync(new JsonObject { ["type"] = "get_config" }, ct);
 
     public async Task ImportStatisticsAsync(
         StatisticsMetadata metadata, IReadOnlyList<HassStatePoint> points, CancellationToken ct = default)
@@ -81,8 +75,8 @@ public class HassWebSocketClient : IAsyncDisposable
                 ["name"] = metadata.Name,
                 ["source"] = StatisticsMetadata.Source,
                 ["statistic_id"] = metadata.StatisticId,
-                ["unit_class"] = StatisticsMetadata.UnitClass,
-                ["unit_of_measurement"] = StatisticsMetadata.UnitOfMeasurement,
+                ["unit_class"] = metadata.UnitClass,
+                ["unit_of_measurement"] = metadata.UnitOfMeasurement,
             },
             ["stats"] = stats,
         };

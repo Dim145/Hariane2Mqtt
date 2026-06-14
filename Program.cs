@@ -2,20 +2,11 @@ using System.Globalization;
 using System.Runtime.InteropServices;
 using Hariane2Mqtt;
 using Hariane2Mqtt.Hariane;
-using Hariane2Mqtt.HomeAssistant;
-using Hariane2Mqtt.Mqtt;
 
 // --- configuration (environment variables) ---
 
 var debug = bool.Parse(Environment.GetEnvironmentVariable("DEBUG") ?? "false");
 Log.Configure(Environment.GetEnvironmentVariable("LOG_LEVEL"), debug);
-
-var calculateTotalConsumption = bool.Parse(Environment.GetEnvironmentVariable("CALCULATE_TOTAL_CONSUMPTION") ?? "false");
-var importStats = bool.Parse(Environment.GetEnvironmentVariable("IMPORT_ENERGY_STATISTICS") ?? "false");
-var leakDetection = bool.Parse(Environment.GetEnvironmentVariable("LEAK_DETECTION") ?? "false");
-var leakMinDays = int.Parse(Environment.GetEnvironmentVariable("LEAK_MIN_DAYS") ?? "3");
-var leakThreshold = float.Parse(Environment.GetEnvironmentVariable("LEAK_DAILY_THRESHOLD") ?? "0.1", CultureInfo.InvariantCulture);
-var directoryForData = Environment.GetEnvironmentVariable("DIRECTORY_FOR_DATA") ?? "/data";
 
 var username = Environment.GetEnvironmentVariable("HARIANE_USERNAME");
 var password = Environment.GetEnvironmentVariable("HARIANE_PASSWORD");
@@ -26,9 +17,9 @@ if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
     return 1;
 }
 
-var numContrat = Environment.GetEnvironmentVariable("HARIANE_NUM_CONTRAT");
+var numContratRaw = Environment.GetEnvironmentVariable("HARIANE_NUM_CONTRAT");
 
-if (string.IsNullOrEmpty(numContrat))
+if (string.IsNullOrEmpty(numContratRaw))
 {
     Log.Fatal("Please set the HARIANE_NUM_CONTRAT environment variable.");
     return 1;
@@ -47,6 +38,33 @@ if (string.IsNullOrEmpty(mqttBroker) || string.IsNullOrEmpty(mqttClientId) || st
     return 1;
 }
 
+var config = new RunConfig
+{
+    MqttHost = mqttBroker,
+    MqttPort = mqttPort,
+    MqttClientId = mqttClientId,
+    MqttUsername = mqttUsername,
+    MqttPassword = mqttPassword,
+    MqttTopic = mqttTopic,
+    CalculateTotal = bool.Parse(Environment.GetEnvironmentVariable("CALCULATE_TOTAL_CONSUMPTION") ?? "false"),
+    ImportStats = bool.Parse(Environment.GetEnvironmentVariable("IMPORT_ENERGY_STATISTICS") ?? "false"),
+    PricePerM3 = float.Parse(Environment.GetEnvironmentVariable("PRICE_PER_M3") ?? "0", CultureInfo.InvariantCulture),
+    LeakDetection = bool.Parse(Environment.GetEnvironmentVariable("LEAK_DETECTION") ?? "false"),
+    LeakMinDays = int.Parse(Environment.GetEnvironmentVariable("LEAK_MIN_DAYS") ?? "3"),
+    LeakThreshold = float.Parse(Environment.GetEnvironmentVariable("LEAK_DAILY_THRESHOLD") ?? "0.1", CultureInfo.InvariantCulture),
+    DirectoryForData = Environment.GetEnvironmentVariable("DIRECTORY_FOR_DATA") ?? "/data",
+};
+
+// HARIANE_NUM_CONTRAT may list several contracts, comma-separated.
+var contracts = numContratRaw.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+var multi = contracts.Length > 1;
+
+if (contracts.Length == 0)
+{
+    Log.Fatal("HARIANE_NUM_CONTRAT does not contain a valid contract number.");
+    return 1;
+}
+
 // graceful shutdown on Ctrl+C (SIGINT) and `docker stop` (SIGTERM)
 using var cts = new CancellationTokenSource();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
@@ -57,126 +75,31 @@ try
 {
     var apiClient = await new ApiClient(username, password).Login(ct);
 
-    var infosContrat = await apiClient.GetInfosContrat(numContrat, ct);
-    var numCompteur = infosContrat?.M2ONumCpt;
-
-    if (string.IsNullOrWhiteSpace(numCompteur))
+    var hadError = false;
+    foreach (var contrat in contracts)
     {
-        Log.Fatal("Could not get the meter number.");
-        return 1;
-    }
-
-    var lastIndex = await apiClient.SetRequiredNums(numContrat, numCompteur).GetLastIndex(ct);
-
-    var dateFin = lastIndex?.GetEndDateJour() ?? DateTime.Now - TimeSpan.FromDays(1);
-    var dateDebut = dateFin - TimeSpan.FromDays(ApiClient.maxDays);
-
-    Log.Info($"Get data from {dateDebut.Date:d} to {dateFin.Date:d}...");
-
-    var waterData = await apiClient.GetVisuConso(dateDebut, dateFin, ct);
-
-    await using var mqttClient = new MqttClient(mqttBroker, mqttPort, mqttClientId, mqttTopic, mqttUsername, mqttPassword, numContrat);
-    await mqttClient.Connect();
-
-    if (waterData is not null)
-    {
-        await mqttClient.PublishConsumption(waterData);
-
-        if (leakDetection)
+        try
         {
-            var (suspected, minDaily, days) = LeakDetector.Evaluate(waterData.GetConso(), leakMinDays, leakThreshold);
-            await mqttClient.PublishLeakSuspected(suspected, new Dictionary<string, object>
-            {
-                { "min_daily_m3", minDaily },
-                { "days_considered", days },
-                { "threshold_m3", leakThreshold },
-            });
-            Log.Info($"Leak suspected: {suspected} (min daily {minDaily} m³ over {days} day(s)).");
+            await ContractProcessor.ProcessAsync(apiClient, contrat, multi, config, ct);
         }
-    }
-    else
-    {
-        Log.Warning("No current consumption data returned; skipping last-value publish.");
-    }
-
-    if (lastIndex is not null)
-        await mqttClient.PublishMeterIndex(lastIndex.Index);
-
-    // --- Cumulative total (MQTT) and/or Energy statistics import (Home Assistant) ---
-
-    if (calculateTotalConsumption || importStats)
-    {
-        var state = StateStore.LoadOrMigrate(directoryForData);
-        var (fullHistory, from) = ConsumptionCursor.PlanWindow(state, importStats);
-
-        Dictionary<DateTime, float> series;
-        double baseCumulative;
-
-        if (fullHistory)
+        catch (OperationCanceledException)
         {
-            Log.Info("Calculating full consumption history (one-time, can take a while)...");
-            series = await Utils.GetDataFrom(apiClient, DateTime.MinValue, dateFin, ct);
-            baseCumulative = 0d;
+            throw; // a cancellation is global — stop the whole run
         }
-        else
+        catch (HarianeException e)
         {
-            baseCumulative = state!.CumulativeTotal;
-            if (from.Date <= dateFin.Date)
-            {
-                Log.Info($"Fetching new consumption from {from.Date:d} to {dateFin.Date:d}...");
-                series = await Utils.GetDataFrom(apiClient, from, dateFin, ct);
-            }
-            else
-            {
-                Log.Info("No new consumption data since last run.");
-                series = new Dictionary<DateTime, float>();
-            }
+            Log.Error($"Contract {contrat}: Hariane error [{e.Kind}]: {e.Message}");
+            hadError = true;
         }
-
-        var (newCumulative, newLastDay) = ConsumptionCursor.Advance(baseCumulative, series, state);
-
-        // 1. MQTT total sensor (now backed by a double cumulative).
-        if (calculateTotalConsumption)
+        catch (Exception e)
         {
-            await mqttClient.PublishTotal((float)newCumulative);
-            Log.Info($"Total consumption: {newCumulative} m3");
-        }
-
-        // 2. Energy statistics import, dated to the correct day (Home Assistant Energy dashboard).
-        var statisticsImported = state?.StatisticsImported ?? false;
-
-        if (importStats && series.Count > 0)
-        {
-            var (wsUri, token) = HassConnection.Resolve();
-            await using var hass = new HassWebSocketClient(wsUri, token);
-
-            using var wsCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-            wsCts.CancelAfter(TimeSpan.FromSeconds(60));
-
-            await hass.ConnectAndAuthAsync(wsCts.Token);
-            var tz = TimeZoneInfo.FindSystemTimeZoneById(await hass.GetTimeZoneAsync(wsCts.Token));
-
-            var (points, _, _) = StatisticsBuilder.Build(series, baseCumulative, tz);
-            await hass.ImportStatisticsAsync(new StatisticsMetadata(numContrat), points, wsCts.Token);
-
-            statisticsImported = true;
-        }
-
-        // 3. Persist the cursor only once MQTT + import have succeeded.
-        if (newLastDay.HasValue)
-        {
-            StateStore.Save(directoryForData, new AppState
-            {
-                CumulativeTotal = newCumulative,
-                LastDataDate = newLastDay.Value,
-                StatisticsImported = statisticsImported,
-            });
+            Log.Error($"Contract {contrat} failed: {e.Message}");
+            Log.Debug(e.ToString());
+            hadError = true;
         }
     }
 
-    await mqttClient.PublishLastUpdate(DateTimeOffset.Now);
-
-    return 0;
+    return hadError ? 1 : 0;
 }
 catch (HarianeException e)
 {

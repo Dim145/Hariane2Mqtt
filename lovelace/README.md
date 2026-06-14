@@ -14,14 +14,17 @@ Aucune dépendance externe, aucune étape de build : c'est un simple fichier `.j
 
 ## Installation via HACS
 
-Ce dépôt expose la carte comme plugin HACS ([`hacs.json`](../hacs.json)) et chaque release y attache `hariane-water-card.js`.
+La carte est exposée comme plugin HACS ([`hacs.json`](../hacs.json) — la clé `filename` pointe vers `hariane-water-card.js`, le nom du dépôt différant du nom de la carte). Le `.js` est dans [`dist/`](../dist/), l'emplacement qu'HACS inspecte en premier ; **chaque release l'attache aussi en asset**. HACS le télécharge, le copie dans `www/community/…` et **enregistre la ressource automatiquement** (pas de copie ni de redémarrage manuel).
 
 1. HACS → ⋮ → **Dépôts personnalisés** → ajoutez `https://github.com/Dim145/Hariane2Mqtt`, catégorie **Tableau de bord**.
-2. Installez « Hariane Water Card », puis ajoutez la carte à un tableau de bord (un éditeur graphique est disponible).
+2. Installez « Hariane Water Card » (depuis la dernière release).
+3. Ajoutez la carte à un tableau de bord — un **éditeur graphique** est disponible, sinon voir le YAML ci-dessous.
+
+> Le `.js` étant dans `/dist`, le dépôt est conforme pour l'install HACS en dépôt personnalisé (branche **ou** release) et pour une éventuelle soumission au **store HACS officiel** (la validation tourne via [hacs.yml](../.github/workflows/hacs.yml)). Les releases sont créées automatiquement à chaque changement de version de l'add-on ([on_version_change.yml](../.github/workflows/on_version_change.yml)).
 
 ## Installation manuelle
 
-1. Copiez [`hariane-water-card.js`](hariane-water-card.js) dans `config/www/` de Home Assistant
+1. Copiez [`hariane-water-card.js`](../dist/hariane-water-card.js) dans `config/www/` de Home Assistant
    (→ accessible sous `/local/hariane-water-card.js`).
 2. Déclarez la ressource : **Paramètres → Tableaux de bord → ⋮ → Ressources → Ajouter** :
    - URL : `/local/hariane-water-card.js`
@@ -56,6 +59,6 @@ Un [`preview.html`](preview.html) monte la carte avec des données d'exemple (th
 Servez le dossier puis ouvrez-le :
 
 ```bash
-python3 -m http.server 8731 --directory lovelace
-# puis http://localhost:8731/preview.html
+python3 -m http.server 8731
+# puis http://localhost:8731/lovelace/preview.html
 ```

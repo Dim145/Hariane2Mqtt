@@ -18,19 +18,26 @@ public class AppState
 
 public static class StateStore
 {
-    private const string StateFileName = "hariane2mqtt_state.json";
+    public const string DefaultStateFile = "hariane2mqtt_state.json";
     private const string LegacyFileName = "hariane2mqtt_total_consumption.txt";
 
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
 
     /// <summary>
-    /// Loads the JSON state, or migrates the legacy two-line total file if present
-    /// (preserving the cumulative cursor so existing users avoid a fresh heavy backfill).
-    /// Returns null when there is no prior state at all (first run ever).
+    /// State filename for a contract: the shared default for a single contract (backward-compatible),
+    /// or a per-contract suffixed file when several contracts are tracked.
     /// </summary>
-    public static AppState? LoadOrMigrate(string directory)
+    public static string StateFileFor(string slug, bool multi) =>
+        multi ? $"hariane2mqtt_state_{slug}.json" : DefaultStateFile;
+
+    /// <summary>
+    /// Loads the JSON state, or migrates the legacy two-line total file (single-contract default only),
+    /// preserving the cumulative cursor so existing users avoid a fresh heavy backfill.
+    /// Returns null when there is no prior state (first run).
+    /// </summary>
+    public static AppState? LoadOrMigrate(string directory, string stateFileName)
     {
-        var path = Path.Combine(directory, StateFileName);
+        var path = Path.Combine(directory, stateFileName);
         if (File.Exists(path))
         {
             try
@@ -39,10 +46,14 @@ public static class StateStore
             }
             catch (Exception e)
             {
-                Console.Error.WriteLine($"Could not read state file, treating as first run: {e.Message}");
+                Log.Error($"Could not read state file {stateFileName}, treating as first run: {e.Message}");
                 return null;
             }
         }
+
+        // The legacy total file pre-dates multi-contract, so it only seeds the single-contract default.
+        if (stateFileName != DefaultStateFile)
+            return null;
 
         var legacyPath = Path.Combine(directory, LegacyFileName);
         if (!File.Exists(legacyPath))
@@ -54,7 +65,7 @@ public static class StateStore
             var total = double.Parse(lines[0], CultureInfo.InvariantCulture);
             var lastDate = DateTime.Parse(lines[1], CultureInfo.InvariantCulture);
 
-            Console.WriteLine("Migrating legacy total consumption file to state file...");
+            Log.Info("Migrating legacy total consumption file to state file...");
             return new AppState
             {
                 CumulativeTotal = total,
@@ -64,16 +75,16 @@ public static class StateStore
         }
         catch (Exception e)
         {
-            Console.Error.WriteLine($"Could not migrate legacy total file, treating as first run: {e.Message}");
+            Log.Error($"Could not migrate legacy total file, treating as first run: {e.Message}");
             return null;
         }
     }
 
-    public static void Save(string directory, AppState state)
+    public static void Save(string directory, string stateFileName, AppState state)
     {
         if (!Directory.Exists(directory))
             Directory.CreateDirectory(directory);
 
-        File.WriteAllText(Path.Combine(directory, StateFileName), JsonSerializer.Serialize(state, JsonOptions));
+        File.WriteAllText(Path.Combine(directory, stateFileName), JsonSerializer.Serialize(state, JsonOptions));
     }
 }

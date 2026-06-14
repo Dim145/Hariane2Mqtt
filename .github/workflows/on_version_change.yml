@@ -42,4 +42,4 @@ jobs:
             You have to change this description...
           draft: false
           prerelease: false
-          files: lovelace/hariane-water-card.js
+          files: dist/hariane-water-card.js

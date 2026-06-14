@@ -21,6 +21,8 @@ Les données récupérées et calculées sont les suivantes :
 - L'index réel du compteur (index)
 - Une alerte de fuite suspectée (binary_sensor `leak_suspected`, option `leak_detection`)
 - L'horodatage du dernier relevé réussi (`last_update`) et un topic de disponibilité MQTT (Last Will : passe `offline` si le programme plante en cours d'exécution)
+- Le coût dans le dashboard Énergie (statistique `hariane:water_cost_<contrat>`, option `price_per_m3`)
+- Plusieurs contrats dans une seule instance (`HARIANE_NUM_CONTRAT` séparés par des virgules)
 
 Attention, pour récupérer le total, l'api va récupérer toutes les données de consommation jusqu'au début des données existant sur Hariane par lot de 17 jours. Cela peut
 représenté énormément d'appel api qui peut prendre du temps. Cela ne sera fait que la première fois. Une fois le total connu, le calcul se fera à partir de ce qui est connu + les nouvelles valeurs.
@@ -38,9 +40,13 @@ Ensuite, dans Home Assistant : **Paramètres → Tableaux de bord → Énergie �
 
 > Au premier lancement (ou après migration depuis une ancienne version), tout l'historique disponible sur Hariane est récupéré et importé une seule fois (opération potentiellement longue, par lots de 17 jours). Les exécutions suivantes n'ajoutent que les nouveaux jours.
 
+**Coût** : définissez `price_per_m3` (add-on) / `PRICE_PER_M3` (Docker) à votre tarif au m³. Une seconde statistique `hariane:water_cost_<contrat>` (dans la devise de HA) est alors importée — liez-la dans **Énergie → Eau → coût**.
+
+**Plusieurs contrats** : listez-les dans `HARIANE_NUM_CONTRAT` séparés par des virgules (ex. `123456789,987654321`). Chaque contrat obtient son propre appareil MQTT, ses statistiques et son fichier d'état.
+
 # Carte Lovelace
 
-Une carte custom (dans l'esprit de [content-card-linky](https://github.com/MyElectricalData/content-card-linky) / [lovelace-gazpar-card](https://github.com/ssenart/lovelace-gazpar-card)) est fournie dans [`lovelace/`](lovelace/) : dernier relevé, totaux semaine/mois/année avec tendances, et histogramme des derniers jours. Elle lit la statistique `hariane:water_<contrat>` (nécessite `import_energy_statistics`). Installation et options : [lovelace/README.md](lovelace/README.md).
+Une carte custom (dans l'esprit de [content-card-linky](https://github.com/MyElectricalData/content-card-linky) / [lovelace-gazpar-card](https://github.com/ssenart/lovelace-gazpar-card)) est fournie : le fichier dans [`dist/`](dist/hariane-water-card.js), la doc et l'aperçu dans [`lovelace/`](lovelace/). Dernier relevé, totaux semaine/mois/année avec tendances, et histogramme des derniers jours. Elle lit la statistique `hariane:water_<contrat>` (nécessite `import_energy_statistics`). Installation et options : [lovelace/README.md](lovelace/README.md).
 
 # Roadmap
 - Ajout de l'historique des 17 derniers jours dans les attributs du capteur "last_value".

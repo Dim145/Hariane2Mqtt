@@ -7,3 +7,9 @@ riderModule.iml
 .idea
 .claude
 .vscode
+.DS_Store
+
+# secrets & local test scaffolding
+.env
+.test/
+compose.test.yml

@@ -55,11 +55,26 @@ public class MqttClient : IAsyncDisposable
 
         var last = dict.MaxBy(e => e.Key);
 
+        // Recent daily history (the fetched window) exposed as attributes of last_value,
+        // newest first — handy for templates and cards.
+        var history = dict
+            .OrderByDescending(e => e.Key)
+            .Select(e => new Dictionary<string, object>
+            {
+                { "date", e.Key.ToString("yyyy-MM-dd") },
+                { "value", e.Value },
+            })
+            .ToList();
+
         await Publish("sensor", "last_value", Num(last.Value), new Dictionary<string, object>
         {
             { "device_class", "water" },
             { "unit_of_measurement", "m³" },
             { "state_class", "total" },
+        }, new Dictionary<string, object>
+        {
+            { "history", history },
+            { "unit_of_measurement", "m³" },
         });
 
         await Publish("sensor", "last_value_date", last.Key.ToString("yyyy-MM-dd HH:mm:ss"), new Dictionary<string, object>());
