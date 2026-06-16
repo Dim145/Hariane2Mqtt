@@ -40,7 +40,9 @@ Ensuite, dans Home Assistant : **Paramètres → Tableaux de bord → Énergie �
 
 > Au premier lancement (ou après migration depuis une ancienne version), tout l'historique disponible sur Hariane est récupéré et importé une seule fois (opération potentiellement longue, par lots de 17 jours). Les exécutions suivantes n'ajoutent que les nouveaux jours.
 
-**Coût** : définissez `price_per_m3` (add-on) / `PRICE_PER_M3` (Docker) à votre tarif au m³. Une seconde statistique `hariane:water_cost_<contrat>` (dans la devise de HA) est alors importée — liez-la dans **Énergie → Eau → coût**.
+**Coût** : définissez `price_per_m3` / `PRICE_PER_M3` à un tarif plat (`4.30`) **ou à un barème daté** (`2023-01-01:3.50,2025-06-01:4.30` — chaque prix s'applique à partir de sa date, sans rétroactivité ; le coût de chaque jour utilise le prix en vigueur ce jour-là). Une statistique `hariane:water_cost_<contrat>` (dans la devise de HA) est importée. Dans **Énergie → Eau**, choisissez « **Utiliser une entité de suivi des coûts totaux** » et sélectionnez-la.
+
+> ℹ️ Les options « prix statique » / « prix actuel » sont **grisées** quand la source est une statistique externe (`hariane:water_…`) — c'est une [limitation de HA](https://github.com/orgs/home-assistant/discussions/3187), pas un bug. La statistique de coût ci-dessus est la voie supportée (et elle est datée, contrairement au prix statique).
 
 **Plusieurs contrats** : listez-les dans `HARIANE_NUM_CONTRAT` séparés par des virgules (ex. `123456789,987654321`). Chaque contrat obtient son propre appareil MQTT, ses statistiques et son fichier d'état.
 

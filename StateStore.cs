@@ -12,8 +12,10 @@ public class AppState
 {
     public int SchemaVersion { get; set; } = 1;
     public double CumulativeTotal { get; set; }
+    public double CumulativeCost { get; set; }
     public DateOnly LastDataDate { get; set; }
     public bool StatisticsImported { get; set; }
+    public bool CostImported { get; set; }
 }
 
 public static class StateStore

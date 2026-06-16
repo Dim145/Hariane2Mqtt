@@ -12,7 +12,7 @@ public record RunConfig
 
     public required bool CalculateTotal { get; init; }
     public required bool ImportStats { get; init; }
-    public required float PricePerM3 { get; init; }
+    public required TariffSchedule Tariff { get; init; }
 
     public required bool LeakDetection { get; init; }
     public required int LeakMinDays { get; init; }

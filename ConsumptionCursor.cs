@@ -11,9 +11,11 @@ public static class ConsumptionCursor
     /// HA statistics the first time the energy import runs for an already-tracked meter.
     /// Otherwise we fetch incrementally from the day after the last recorded day.
     /// </summary>
-    public static (bool FullHistory, DateTime From) PlanWindow(AppState? state, bool importStats)
+    public static (bool FullHistory, DateTime From) PlanWindow(AppState? state, bool importStats, bool costEnabled)
     {
-        var needFull = state is null || (importStats && !state.StatisticsImported);
+        var needFull = state is null
+                       || (importStats && !state.StatisticsImported)
+                       || (importStats && costEnabled && !state.CostImported); // newly-enabled cost → rebuild
         if (needFull)
             return (true, DateTime.MinValue);
 

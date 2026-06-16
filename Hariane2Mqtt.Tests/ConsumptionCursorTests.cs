@@ -7,7 +7,7 @@ public class ConsumptionCursorTests
     [Fact]
     public void PlanWindow_FirstRun_NeedsFullHistory()
     {
-        var (full, from) = ConsumptionCursor.PlanWindow(null, importStats: false);
+        var (full, from) = ConsumptionCursor.PlanWindow(null, importStats: false, costEnabled: false);
         Assert.True(full);
         Assert.Equal(DateTime.MinValue, from);
     }
@@ -16,7 +16,7 @@ public class ConsumptionCursorTests
     public void PlanWindow_MigratedState_NeedsFullHistory_WhenStatsNotYetImported()
     {
         var state = new AppState { CumulativeTotal = 10, LastDataDate = new DateOnly(2026, 6, 1), StatisticsImported = false };
-        var (full, _) = ConsumptionCursor.PlanWindow(state, importStats: true);
+        var (full, _) = ConsumptionCursor.PlanWindow(state, importStats: true, costEnabled: false);
         Assert.True(full);
     }
 
@@ -24,7 +24,7 @@ public class ConsumptionCursorTests
     public void PlanWindow_Incremental_WhenStatsAlreadyImported()
     {
         var state = new AppState { CumulativeTotal = 10, LastDataDate = new DateOnly(2026, 6, 1), StatisticsImported = true };
-        var (full, from) = ConsumptionCursor.PlanWindow(state, importStats: true);
+        var (full, from) = ConsumptionCursor.PlanWindow(state, importStats: true, costEnabled: false);
         Assert.False(full);
         Assert.Equal(new DateTime(2026, 6, 2), from); // the day after the last recorded day
     }
@@ -33,9 +33,26 @@ public class ConsumptionCursorTests
     public void PlanWindow_Incremental_WhenImportDisabled_EvenIfNotYetImported()
     {
         var state = new AppState { CumulativeTotal = 10, LastDataDate = new DateOnly(2026, 6, 1), StatisticsImported = false };
-        var (full, from) = ConsumptionCursor.PlanWindow(state, importStats: false);
+        var (full, from) = ConsumptionCursor.PlanWindow(state, importStats: false, costEnabled: false);
         Assert.False(full);
         Assert.Equal(new DateTime(2026, 6, 2), from);
+    }
+
+    [Fact]
+    public void PlanWindow_CostNewlyEnabled_NeedsFullHistory()
+    {
+        // water already imported, but cost was never computed → rebuild to get historical cost
+        var state = new AppState { CumulativeTotal = 10, LastDataDate = new DateOnly(2026, 6, 1), StatisticsImported = true, CostImported = false };
+        var (full, _) = ConsumptionCursor.PlanWindow(state, importStats: true, costEnabled: true);
+        Assert.True(full);
+    }
+
+    [Fact]
+    public void PlanWindow_Incremental_WhenCostAlreadyImported()
+    {
+        var state = new AppState { CumulativeTotal = 10, LastDataDate = new DateOnly(2026, 6, 1), StatisticsImported = true, CostImported = true };
+        var (full, _) = ConsumptionCursor.PlanWindow(state, importStats: true, costEnabled: true);
+        Assert.False(full);
     }
 
     [Fact]

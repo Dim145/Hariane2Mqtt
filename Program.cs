@@ -38,6 +38,17 @@ if (string.IsNullOrEmpty(mqttBroker) || string.IsNullOrEmpty(mqttClientId) || st
     return 1;
 }
 
+TariffSchedule tariff;
+try
+{
+    tariff = TariffSchedule.Parse(Environment.GetEnvironmentVariable("PRICE_PER_M3"));
+}
+catch (Exception e)
+{
+    Log.Fatal($"Invalid PRICE_PER_M3 (expected a number or 'YYYY-MM-DD:price,…'): {e.Message}");
+    return 1;
+}
+
 var config = new RunConfig
 {
     MqttHost = mqttBroker,
@@ -48,7 +59,7 @@ var config = new RunConfig
     MqttTopic = mqttTopic,
     CalculateTotal = bool.Parse(Environment.GetEnvironmentVariable("CALCULATE_TOTAL_CONSUMPTION") ?? "false"),
     ImportStats = bool.Parse(Environment.GetEnvironmentVariable("IMPORT_ENERGY_STATISTICS") ?? "false"),
-    PricePerM3 = float.Parse(Environment.GetEnvironmentVariable("PRICE_PER_M3") ?? "0", CultureInfo.InvariantCulture),
+    Tariff = tariff,
     LeakDetection = bool.Parse(Environment.GetEnvironmentVariable("LEAK_DETECTION") ?? "false"),
     LeakMinDays = int.Parse(Environment.GetEnvironmentVariable("LEAK_MIN_DAYS") ?? "3"),
     LeakThreshold = float.Parse(Environment.GetEnvironmentVariable("LEAK_DAILY_THRESHOLD") ?? "0.1", CultureInfo.InvariantCulture),

@@ -70,7 +70,7 @@ public static class ContractProcessor
     {
         var stateFile = StateStore.StateFileFor(slug, multi);
         var state = StateStore.LoadOrMigrate(cfg.DirectoryForData, stateFile);
-        var (fullHistory, from) = ConsumptionCursor.PlanWindow(state, cfg.ImportStats);
+        var (fullHistory, from) = ConsumptionCursor.PlanWindow(state, cfg.ImportStats, costEnabled: !cfg.Tariff.IsEmpty);
 
         Dictionary<DateTime, float> series;
         double baseCumulative;
@@ -105,6 +105,8 @@ public static class ContractProcessor
         }
 
         var statisticsImported = state?.StatisticsImported ?? false;
+        var newCost = state?.CumulativeCost ?? 0d;
+        var costImported = state?.CostImported ?? false;
 
         if (cfg.ImportStats && series.Count > 0)
         {
@@ -124,14 +126,22 @@ public static class ContractProcessor
             var (points, _, _) = StatisticsBuilder.Build(series, baseCumulative, tz);
             await hass.ImportStatisticsAsync(StatisticsMetadata.Water(numContrat), points, wsCts.Token);
 
-            if (cfg.PricePerM3 > 0)
+            if (!cfg.Tariff.IsEmpty)
             {
                 var currency = config?["currency"]?.GetValue<string>() ?? "EUR";
-                var costPoints = points
-                    .Select(p => new HassStatePoint(p.Start, p.Sum * cfg.PricePerM3, p.Sum * cfg.PricePerM3))
-                    .ToList();
+                var baseCost = fullHistory ? 0d : state?.CumulativeCost ?? 0d;
+
+                // Cost of each day = that day's consumption × the price in effect on that day.
+                var costSeries = series.ToDictionary(
+                    kv => kv.Key,
+                    kv => kv.Value * cfg.Tariff.PriceOn(DateOnly.FromDateTime(kv.Key)));
+
+                var (costPoints, costCumulative, _) = StatisticsBuilder.Build(costSeries, baseCost, tz);
                 await hass.ImportStatisticsAsync(StatisticsMetadata.WaterCost(numContrat, currency), costPoints, wsCts.Token);
-                Log.Info($"Imported water cost statistics ({cfg.PricePerM3} {currency}/m³).");
+
+                newCost = costCumulative;
+                costImported = true;
+                Log.Info($"Imported water cost statistics ({currency}).");
             }
 
             statisticsImported = true;
@@ -142,8 +152,10 @@ public static class ContractProcessor
             StateStore.Save(cfg.DirectoryForData, stateFile, new AppState
             {
                 CumulativeTotal = newCumulative,
+                CumulativeCost = newCost,
                 LastDataDate = newLastDay.Value,
                 StatisticsImported = statisticsImported,
+                CostImported = costImported,
             });
         }
     }
