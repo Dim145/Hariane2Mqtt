@@ -20,7 +20,7 @@
       MQTT_USERNAME: xxxxx
       CALCULATE_TOTAL_CONSUMPTION: false
       IMPORT_ENERGY_STATISTICS: false
-      PRICE_PER_M3: ""   # tarif "4.30" ou barème daté "2023-01-01:3.50,2025-06-01:4.30" → statistique de coût (Énergie → Eau)
+      PRICE_PER_M3: ""   # "4.30" (mode auto : changez le nombre, la date est mémorisée) ou barème daté "2023-01-01:3.50,2025-06-01:4.30"
       # Standalone only — Home Assistant Energy dashboard import.
       # HASS_TOKEN must be a long-lived access token from an ADMIN user.
       # Leave unset when running as a Home Assistant add-on (SUPERVISOR_TOKEN is used automatically).

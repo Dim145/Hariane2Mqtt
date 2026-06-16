@@ -16,6 +16,9 @@ public class AppState
     public DateOnly LastDataDate { get; set; }
     public bool StatisticsImported { get; set; }
     public bool CostImported { get; set; }
+
+    /// <summary>Recorded flat-price changes (auto mode): each price effective from its date.</summary>
+    public List<TariffEntry> Tariffs { get; set; } = new();
 }
 
 public static class StateStore

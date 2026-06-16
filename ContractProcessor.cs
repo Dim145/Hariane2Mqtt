@@ -108,6 +108,16 @@ public static class ContractProcessor
         var newCost = state?.CumulativeCost ?? 0d;
         var costImported = state?.CostImported ?? false;
 
+        // Flat mode (PRICE_PER_M3 is a bare number): record each price change with its date so past
+        // days keep their price and the new price applies from today on. A dated schedule is used as-is.
+        var tariffs = state?.Tariffs is { Count: > 0 } recorded ? new List<TariffEntry>(recorded) : new List<TariffEntry>();
+        var effectiveTariff = cfg.Tariff;
+        if (cfg.Tariff.FlatPrice is { } flatPrice)
+        {
+            tariffs = TariffSchedule.RecordFlatChange(tariffs, flatPrice, DateOnly.FromDateTime(DateTime.Now));
+            effectiveTariff = TariffSchedule.FromEntries(tariffs);
+        }
+
         if (cfg.ImportStats && series.Count > 0)
         {
             var (wsUri, token) = HassConnection.Resolve();
@@ -126,7 +136,7 @@ public static class ContractProcessor
             var (points, _, _) = StatisticsBuilder.Build(series, baseCumulative, tz);
             await hass.ImportStatisticsAsync(StatisticsMetadata.Water(numContrat), points, wsCts.Token);
 
-            if (!cfg.Tariff.IsEmpty)
+            if (!effectiveTariff.IsEmpty)
             {
                 var currency = config?["currency"]?.GetValue<string>() ?? "EUR";
                 var baseCost = fullHistory ? 0d : state?.CumulativeCost ?? 0d;
@@ -134,7 +144,7 @@ public static class ContractProcessor
                 // Cost of each day = that day's consumption × the price in effect on that day.
                 var costSeries = series.ToDictionary(
                     kv => kv.Key,
-                    kv => kv.Value * cfg.Tariff.PriceOn(DateOnly.FromDateTime(kv.Key)));
+                    kv => kv.Value * effectiveTariff.PriceOn(DateOnly.FromDateTime(kv.Key)));
 
                 var (costPoints, costCumulative, _) = StatisticsBuilder.Build(costSeries, baseCost, tz);
                 await hass.ImportStatisticsAsync(StatisticsMetadata.WaterCost(numContrat, currency), costPoints, wsCts.Token);
@@ -156,6 +166,7 @@ public static class ContractProcessor
                 LastDataDate = newLastDay.Value,
                 StatisticsImported = statisticsImported,
                 CostImported = costImported,
+                Tariffs = tariffs,
             });
         }
     }
